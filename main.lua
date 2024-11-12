@@ -12,6 +12,7 @@ function love.load()
 
 	-- Calculate scaling factors based on background image size
 	sprites = {}
+	swamps = {}
 	sprites.background = love.graphics.newImage("background.png")
 	scaleX = WINDOW_WIDTH / sprites.background:getWidth()
 	scaleY = WINDOW_HEIGHT / sprites.background:getHeight()
@@ -21,6 +22,7 @@ function love.load()
 	sprites.player = love.graphics.newImage("player.png")
 	sprites.zombie = love.graphics.newImage("zombie.png")
 	sprites.building = love.graphics.newImage("building.png")
+	sprites.swamp = love.graphics.newImage("swamp.png")
 
 	-- Initialize player
 	player = {}
@@ -39,6 +41,9 @@ function love.load()
 	-- Setup buildings
 	setupBuildings()
 
+	-- Setup swamps
+	setupSwamps()
+
 	-- Find valid spawn position for player
 	setupPlayerPosition()
 
@@ -48,6 +53,59 @@ function love.load()
 	timer = countdown
 	wave = 1
 	zombiesToSpawn = 10
+end
+
+function setupSwamps()
+	local numSwamps = 2
+	local swampSize = 100  -- adjust size as needed
+	local attempts = 0
+	local maxAttempts = 100
+	local margin = 50
+
+	while #swamps < numSwamps and attempts < maxAttempts do
+		local x = math.random(margin, love.graphics.getWidth() - swampSize - margin)
+		local y = math.random(margin, love.graphics.getHeight() - swampSize - margin)
+
+		-- Check if new swamp overlaps with buildings or other swamps
+		local canPlace = true
+
+		-- Check buildings
+		for _, building in ipairs(buildings) do
+			if checkCollision(
+					x, y,
+					swampSize, swampSize,
+					building.x, building.y,
+					building.width, building.height
+			) then
+				canPlace = false
+				break
+			end
+		end
+
+		-- Check other swamps
+		for _, swamp in ipairs(swamps) do
+			if checkCollision(
+					x, y,
+					swampSize, swampSize,
+					swamp.x, swamp.y,
+					swamp.width, swamp.height
+			) then
+				canPlace = false
+				break
+			end
+		end
+
+		if canPlace then
+			table.insert(swamps, {
+				x = x,
+				y = y,
+				width = swampSize,
+				height = swampSize
+			})
+		end
+
+		attempts = attempts + 1
+	end
 end
 
 function setupBuildings()
@@ -124,6 +182,56 @@ function setupPlayerPosition()
 				player.y = math.random(50, love.graphics.getHeight() - 50)
 				break
 			end
+		end
+	end
+end
+
+function isInSwamp(x, y)
+	for _, swamp in ipairs(swamps) do
+		if checkCollision(
+				x - sprites.zombie:getWidth()/2,
+				y - sprites.zombie:getHeight()/2,
+				sprites.zombie:getWidth(),
+				sprites.zombie:getHeight(),
+				swamp.x, swamp.y,
+				swamp.width, swamp.height
+		) then
+			return true
+		end
+	end
+	return false
+end
+
+function handleZombieMovement(zombie, nextX, nextY, dt)
+	if zombie.circlingBuilding then
+		local angleToPlayer = zombiePlayerAngle(zombie)
+		local testX = zombie.x + math.cos(angleToPlayer) * 50
+		local testY = zombie.y + math.sin(angleToPlayer) * 50
+
+		local pathClear = true
+		for _, building in ipairs(buildings) do
+			if lineIntersectsBuilding(zombie.x, zombie.y, testX, testY, building) then
+				pathClear = false
+				break
+			end
+		end
+
+		if pathClear then
+			zombie.circlingBuilding = false
+			zombie.currentBuilding = nil
+		end
+	end
+
+	if not zombie.circlingBuilding then
+		-- Apply slowdown if zombie is in swamp
+		if isInSwamp(nextX, nextY) then
+			-- Move at half speed in swamp
+			local angleToPlayer = zombiePlayerAngle(zombie)
+			zombie.x = zombie.x + math.cos(angleToPlayer) * (zombie.speed * 0.5) * dt
+			zombie.y = zombie.y + math.sin(angleToPlayer) * (zombie.speed * 0.5) * dt
+		else
+			zombie.x = nextX
+			zombie.y = nextY
 		end
 	end
 end
@@ -250,7 +358,7 @@ function updateZombies(dt)
 		if willCollide then
 			handleZombieBuildingCollision(z, collidingBuilding, dt)
 		else
-			handleZombieMovement(z, nextX, nextY)
+			handleZombieMovement(z, nextX, nextY, dt)
 		end
 	end
 end
@@ -273,32 +381,6 @@ function handleZombieBuildingCollision(zombie, building, dt)
 	local radius = math.sqrt((building.width/2 + 30)^2 + (building.height/2 + 30)^2)
 	zombie.x = buildingCenterX + math.cos(currentAngle) * radius
 	zombie.y = buildingCenterY + math.sin(currentAngle) * radius
-end
-
-function handleZombieMovement(zombie, nextX, nextY)
-	if zombie.circlingBuilding then
-		local angleToPlayer = zombiePlayerAngle(zombie)
-		local testX = zombie.x + math.cos(angleToPlayer) * 50
-		local testY = zombie.y + math.sin(angleToPlayer) * 50
-
-		local pathClear = true
-		for _, building in ipairs(buildings) do
-			if lineIntersectsBuilding(zombie.x, zombie.y, testX, testY, building) then
-				pathClear = false
-				break
-			end
-		end
-
-		if pathClear then
-			zombie.circlingBuilding = false
-			zombie.currentBuilding = nil
-		end
-	end
-
-	if not zombie.circlingBuilding then
-		zombie.x = nextX
-		zombie.y = nextY
-	end
 end
 
 function updateBullets(dt)
@@ -440,11 +522,20 @@ end
 
 function love.draw()
 	drawBackground()
+	drawSwamps()
 	drawBuildings()
 	drawBullets()
 	drawPlayer()
 	drawZombies()
 	drawUI()
+end
+
+function drawSwamps()
+	for _, swamp in ipairs(swamps) do
+		local scaleX = swamp.width / sprites.swamp:getWidth()
+		local scaleY = swamp.height / sprites.swamp:getHeight()
+		love.graphics.draw(sprites.swamp, swamp.x, swamp.y, 0, scaleX, scaleY)
+	end
 end
 
 function drawBackground()
