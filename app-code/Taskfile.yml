@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - rm -rf html
+      - zip -9 -r lua-zombie-topdown-shooter.love .
+      - love.js lua-zombie-topdown-shooter.love html -m 167772164 -t "Zombie Shooter" -c;
+  run-local-html:
+    cmds:
+      - |
+        cd html
+        python -m http.server 8000
