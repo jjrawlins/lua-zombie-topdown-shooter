@@ -13,13 +13,11 @@
     "eslint": "npx projen eslint",
     "package": "npx projen package",
     "post-compile": "npx projen post-compile",
-    "post-upgrade": "npx projen post-upgrade",
     "pre-compile": "npx projen pre-compile",
     "synth": "npx projen synth",
     "synth:silent": "npx projen synth:silent",
     "test": "npx projen test",
     "test:watch": "npx projen test:watch",
-    "upgrade": "npx projen upgrade",
     "watch": "npx projen watch",
     "projen": "npx projen"
   },
@@ -29,7 +27,7 @@
     "@types/node": "^22.9.0",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
-    "aws-cdk": "^2.1.0",
+    "aws-cdk": "^2.166.0",
     "esbuild": "^0.24.0",
     "eslint": "^9",
     "eslint-import-resolver-typescript": "^3.6.3",
@@ -42,7 +40,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.1.0",
+    "aws-cdk-lib": "^2.166.0",
     "constructs": "^10.0.5"
   },
   "license": "Apache-2.0",
